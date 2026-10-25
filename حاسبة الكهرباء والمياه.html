@@ -1,0 +1,388 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>حاسبة الكهرباء والمياه</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;600;700&display=swap">
+<style>
+/* Layout: two metered columns (electricity amber, water blue) feeding one combined ledger on top. */
+:root {
+  --bg: #f1f4f9;
+  --surface: #ffffff;
+  --surface-2: #f6f8fc;
+  --ink: #0e1b33;
+  --muted: #5a6680;
+  --line: #dce3ef;
+  --track: #e4e9f3;
+  --elec: #e0a000;
+  --elec-ink: #7a5300;
+  --elec-soft: #fff4d6;
+  --water: #1a8bd4;
+  --water-ink: #0b5a91;
+  --water-soft: #e1f2fd;
+  --up: #c22d2d;
+  --up-soft: #fde9e9;
+  --inv-bg: #0e1b33;
+  --inv-fg: #f1f5ff;
+  --inv-muted: #a9b5d0;
+  --f-display: 'Readex Pro', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --f-body: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1224; --surface: #111b33; --surface-2: #17233f; --ink: #e8eefb; --muted: #9aa7c2;
+    --line: #233152; --track: #1f2c4b; --elec: #f2b52a; --elec-ink: #f6cb64; --elec-soft: #2d2711;
+    --water: #46b1f3; --water-ink: #84cbf8; --water-soft: #10283d; --up: #ff8080; --up-soft: #3a1c26;
+    --inv-bg: #1b2b4d; --inv-fg: #f1f5ff; --inv-muted: #a9b9dc;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1224; --surface: #111b33; --surface-2: #17233f; --ink: #e8eefb; --muted: #9aa7c2;
+  --line: #233152; --track: #1f2c4b; --elec: #f2b52a; --elec-ink: #f6cb64; --elec-soft: #2d2711;
+  --water: #46b1f3; --water-ink: #84cbf8; --water-soft: #10283d; --up: #ff8080; --up-soft: #3a1c26;
+  --inv-bg: #1b2b4d; --inv-fg: #f1f5ff; --inv-muted: #a9b9dc;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.65;
+  padding-block: 26px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
+.num { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; line-height: 1.3; }
+
+/* header */
+.top { display: flex; flex-direction: column; gap: 6px; padding-block: 4px 2px; }
+.eyebrow { font-size: 12.5px; letter-spacing: .04em; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill { background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 1px 10px; }
+h1 { font-size: clamp(26px, 5.4vw, 38px); font-weight: 700; }
+.sub { color: var(--muted); margin: 0; max-width: 62ch; }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.card-h { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.card-h h2 { font-size: 18px; font-weight: 600; }
+.ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.ico svg { width: 19px; height: 19px; }
+.ico.e { background: var(--elec-soft); color: var(--elec-ink); }
+.ico.w { background: var(--water-soft); color: var(--water-ink); }
+
+/* summary */
+.sum { display: flex; flex-direction: column; gap: 10px; }
+.sum .label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13.5px; font-weight: 500; }
+.sum .big { font-family: var(--f-display); font-size: clamp(26px, 6vw, 32px); font-weight: 700; line-height: 1.15; }
+.sum .big small { font-size: 14px; font-weight: 500; color: var(--muted); margin-inline-start: 4px; }
+.sum .was { color: var(--muted); font-size: 13.5px; }
+.badge { align-self: flex-start; background: var(--up-soft); color: var(--up); border-radius: 8px; padding: 2px 10px; font-weight: 600; font-size: 13.5px; }
+.badge.zero { background: var(--surface-2); color: var(--muted); }
+.card.inv { background: var(--inv-bg); border-color: var(--inv-bg); color: var(--inv-fg); }
+.card.inv .label, .card.inv .was, .card.inv .big small { color: var(--inv-muted); }
+.card.inv .badge { background: rgba(255, 128, 128, .16); color: #ffb0b0; }
+.card.inv .badge.zero { background: rgba(255,255,255,.1); color: var(--inv-muted); }
+.annual { border-top: 1px solid rgba(255,255,255,.16); padding-top: 9px; font-size: 13.5px; color: var(--inv-muted); }
+.annual b { color: var(--inv-fg); font-weight: 600; }
+
+/* inputs */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > label { font-weight: 500; font-size: 14px; }
+.inrow { display: flex; gap: 12px; align-items: center; }
+input[type="number"], select {
+  font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 12px; min-width: 0;
+}
+input[type="number"] { width: 128px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; direction: ltr; text-align: center; }
+select { width: 100%; }
+input[type="range"] { flex: 1; min-width: 0; height: 28px; accent-color: var(--c, var(--water)); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; cursor: pointer; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 99px; padding: 2px 12px;
+}
+.chip:hover { border-color: var(--c, var(--water)); }
+.chip[aria-pressed="true"] { background: var(--c); color: #fff; border-color: var(--c); }
+.e-theme { --c: var(--elec); }
+.e-theme .chip[aria-pressed="true"] { color: #1d1500; }
+.w-theme { --c: var(--water); }
+:focus-visible { outline: 2px solid var(--water); outline-offset: 2px; }
+.check { display: flex; gap: 9px; align-items: center; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--water); }
+.hint { color: var(--muted); font-size: 12.5px; margin: 0; }
+
+/* tier meter */
+.meter { display: flex; gap: 3px; margin-top: 4px; }
+.seg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.seg .bar { height: 11px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.seg .fill { height: 100%; background: var(--c); transition: width .25s ease; }
+.seg .cap { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { .seg .fill { transition: none; } }
+
+/* tables */
+.scroll { overflow-x: auto; margin-inline: -4px; padding-inline: 4px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13.5px; }
+th, td { padding: 8px 8px; text-align: start; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+td.n, th.n { text-align: end; }
+tfoot td { border-bottom: 0; }
+tfoot tr.grand td { font-weight: 600; font-size: 15px; border-top: 2px solid var(--line); }
+td.up { color: var(--up); font-weight: 600; }
+.zero-row td { color: var(--muted); }
+
+/* reverse */
+.rev-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+.rev { display: flex; flex-direction: column; gap: 10px; }
+.result { background: var(--surface-2); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.result .r1 { font-family: var(--f-display); font-size: 20px; font-weight: 600; }
+.result .r2 { color: var(--muted); font-size: 13.5px; }
+
+.notes { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.notes p { margin: 0; }
+.notes ul { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 4px; }
+.credit { text-align: center; color: var(--muted); font-size: 13.5px; padding-block: 6px 0; }
+.credit b { color: var(--ink); font-weight: 600; }
+</style>
+
+<div class="wrap" dir="rtl" lang="ar">
+  <header class="top">
+    <div class="eyebrow"><span class="pill">تعرفة سكنية</span><span>التعديل الجديد يبدأ من 1 يناير 2027</span></div>
+    <h1>حاسبة الكهرباء والمياه</h1>
+    <p class="sub">أدخل استهلاكك الشهري لتعرف الفاتورة بالتعرفة السابقة والجديدة، مع تفصيل الشرائح وضريبة القيمة المضافة 15%.</p>
+  </header>
+
+  <section class="grid3" id="summary" aria-live="polite"></section>
+
+  <section class="grid2">
+    <div class="card e-theme">
+      <div class="card-h"><span class="ico e"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.5h5.5L9.5 22 19 9.5h-5.8z"/></svg></span><h2>الكهرباء</h2></div>
+      <div class="field">
+        <label for="kwh">الاستهلاك الشهري (ك.و.س)</label>
+        <div class="inrow">
+          <input id="kwh" type="number" min="0" max="100000" step="10" value="5000" inputmode="numeric">
+          <input id="kwhR" type="range" min="0" max="15000" step="50" value="5000" aria-label="شريط الاستهلاك بالكيلوواط ساعة">
+        </div>
+        <div class="chips" id="kwhChips"></div>
+        <div class="meter" id="kwhMeter"></div>
+      </div>
+    </div>
+
+    <div class="card w-theme">
+      <div class="card-h"><span class="ico w"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9 7 5.8 10.4 5.8 14.3a6.2 6.2 0 0 0 12.4 0C18.2 10.4 15 7 12 2.5z"/></svg></span><h2>المياه</h2></div>
+      <div class="field">
+        <label for="m3">الاستهلاك الشهري (م³)</label>
+        <div class="inrow">
+          <input id="m3" type="number" min="0" max="10000" step="1" value="30" inputmode="numeric">
+          <input id="m3R" type="range" min="0" max="150" step="1" value="30" aria-label="شريط الاستهلاك بالمتر المكعب">
+        </div>
+        <div class="chips" id="m3Chips"></div>
+        <div class="meter" id="m3Meter"></div>
+        <label class="check"><input type="checkbox" id="sewage" checked> يشمل خدمة الصرف الصحي</label>
+        <div>
+          <label for="method" style="font-size:13px;color:var(--muted)">طريقة حساب المياه</label>
+          <select id="method">
+            <option value="0.5" selected>مطابقة أمثلة الإنفوجرافيك (الافتراضي)</option>
+            <option value="1">مجموع أسعار الجدول مباشرة</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-h"><span class="ico e"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.5h5.5L9.5 22 19 9.5h-5.8z"/></svg></span><h2>تفصيل فاتورة الكهرباء</h2></div>
+      <div class="scroll"><table id="tblE"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="ico w"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9 7 5.8 10.4 5.8 14.3a6.2 6.2 0 0 0 12.4 0C18.2 10.4 15 7 12 2.5z"/></svg></span><h2>تفصيل فاتورة المياه</h2></div>
+      <div class="scroll"><table id="tblW"></table></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>كم أستهلك بميزانيتي؟</h2></div>
+    <p class="hint" style="margin-bottom:12px">أدخل مبلغ الفاتورة الشهرية شاملًا الضريبة لتعرف الاستهلاك الذي يغطيه بالتعرفة الجديدة.</p>
+    <div class="rev-grid">
+      <div class="rev">
+        <label for="bE" style="font-weight:500">ميزانية الكهرباء (ر.س)</label>
+        <input id="bE" type="number" min="0" step="10" value="600" inputmode="decimal">
+        <div class="result" id="rE"></div>
+      </div>
+      <div class="rev">
+        <label for="bW" style="font-weight:500">ميزانية المياه (ر.س)</label>
+        <input id="bW" type="number" min="0" step="5" value="50" inputmode="decimal">
+        <div class="result" id="rW"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card notes">
+    <h3 style="font-size:15px;color:var(--ink)">ملاحظات</h3>
+    <ul>
+      <li>الأرقام مأخوذة من الإنفوجرافيك المرفق (WAMD) وليست من جهة رسمية. تحقق من الجهة المزودة للخدمة قبل الاعتماد عليها.</li>
+      <li>الحساب تدريجي: كل شريحة تُسعَّر على الكمية التي تقع داخلها فقط. الأسعار تشمل ضريبة القيمة المضافة 15% عند عرض الإجمالي.</li>
+      <li>لا يشمل الحساب الرسوم الثابتة أو أي رسوم إضافية. التعرفة المعتمدة هي السكنية.</li>
+      <li>أسعار المياه في الجدول تعطي فاتورة تساوي ضعف أمثلة الإنفوجرافيك (10 م³ بالتعرفة السابقة: 7.50 ر.س قبل الضريبة في المثال، و15.00 بجمع أسعار الجدول). الوضع الافتراضي يطابق الأمثلة، ويمكنك تغييره من خيار طريقة الحساب.</li>
+    </ul>
+  </section>
+
+  <footer class="credit">إعداد وتصميم: <b>أبو ساهر الشافعي</b></footer>
+</div>
+
+<script>
+/*CORE*/
+const VAT = 0.15;
+const ELEC = { old: [0.18, 0.30], new: [0.21, 0.33] };
+const ELEC_B = [6000, Infinity];
+const WB = [15, 30, 45, Infinity];
+const WATER = { old: { w: [1, 2, 4, 6], s: [0.5, 1, 2, 3] }, new: { w: [2, 4, 8, 12], s: [1, 2, 4, 6] } };
+function mkSpec(bounds, rates) { return bounds.map((u, i) => ({ upto: u, rate: rates[i] })); }
+function tierRows(spec, qty) {
+  let prev = 0;
+  return spec.map(t => {
+    const q = Math.max(0, Math.min(qty, t.upto) - prev);
+    const r = { from: prev, to: t.upto, qty: q, rate: t.rate, amount: q * t.rate };
+    prev = t.upto; return r;
+  });
+}
+function sum(rows) { return rows.reduce((a, r) => a + r.amount, 0); }
+function withVat(pre) { return { pre: pre, vat: pre * VAT, gross: pre * (1 + VAT) }; }
+function inverse(spec, gross) {
+  let pre = gross / (1 + VAT), qty = 0, prev = 0;
+  for (const t of spec) {
+    const span = t.upto - prev, cost = span * t.rate;
+    if (t.upto === Infinity || pre <= cost) { return qty + (t.rate > 0 ? pre / t.rate : 0); }
+    pre -= cost; qty += span; prev = t.upto;
+  }
+  return qty;
+}
+function waterSpec(which, sewage, mult) {
+  const d = WATER[which];
+  return mkSpec(WB, d.w.map((w, i) => (w + (sewage ? d.s[i] : 0)) * mult));
+}
+function elecSpec(which) { return mkSpec(ELEC_B, ELEC[which]); }
+/*END*/
+
+const $ = id => document.getElementById(id);
+const f2 = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const f0 = n => Math.round(n).toLocaleString('en-US');
+const fq = n => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+const N = s => '<span class="num">' + s + '</span>';
+const ICO_E = '<span class="ico e"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.5h5.5L9.5 22 19 9.5h-5.8z"/></svg></span>';
+const ICO_W = '<span class="ico w"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9 7 5.8 10.4 5.8 14.3a6.2 6.2 0 0 0 12.4 0C18.2 10.4 15 7 12 2.5z"/></svg></span>';
+
+function readNum(id) { const v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; }
+
+function state() {
+  const sewage = $('sewage').checked, mult = parseFloat($('method').value) || 0.5;
+  return {
+    kwh: readNum('kwh'), m3: readNum('m3'), sewage, mult,
+    eOld: elecSpec('old'), eNew: elecSpec('new'),
+    wOld: waterSpec('old', sewage, mult), wNew: waterSpec('new', sewage, mult)
+  };
+}
+
+function sumCard(cls, icon, label, oldV, newV, extra) {
+  const diff = newV - oldV, pct = oldV > 0 ? diff / oldV * 100 : 0;
+  const badge = diff > 0.005
+    ? '<span class="badge">+' + N(f2(diff)) + ' ر.س (' + N(fq(pct) + '%') + ')</span>'
+    : '<span class="badge zero">لا توجد زيادة</span>';
+  return '<div class="card sum ' + cls + '"><div class="label">' + icon + label + '</div>' +
+    '<div class="big">' + N(f2(newV)) + '<small>ر.س / شهريًا</small></div>' +
+    '<div class="was">قبل التعديل: ' + N(f2(oldV)) + ' ر.س</div>' + badge + (extra || '') + '</div>';
+}
+
+function meter(id, spec, qty, unitFmt, minMax) {
+  const max = Math.max(minMax, qty);
+  let prev = 0, html = '';
+  spec.forEach((t, i) => {
+    const to = t.upto === Infinity ? max : Math.min(t.upto, max);
+    const span = Math.max(to - prev, 0);
+    const fill = span > 0 ? Math.min(Math.max((qty - prev) / span, 0), 1) * 100 : 0;
+    const cap = t.upto === Infinity ? unitFmt(prev) + '+' : unitFmt(prev) + '–' + unitFmt(t.upto);
+    html += '<div class="seg" style="flex:' + span + ' 1 0"><div class="bar"><div class="fill" style="width:' + fill + '%;opacity:' + (0.5 + i * 0.17) + '"></div></div><div class="cap">' + N(cap) + '</div></div>';
+    prev = to;
+  });
+  $(id).innerHTML = html;
+}
+
+function tableHtml(oldSpec, newSpec, qty, unit, rateFmt, labelFn) {
+  const o = tierRows(oldSpec, qty), n = tierRows(newSpec, qty);
+  let body = '';
+  o.forEach((r, i) => {
+    const used = r.qty > 0;
+    body += '<tr class="' + (used ? '' : 'zero-row') + '"><td>' + labelFn(r, i) + '</td><td class="n">' + N(fq(r.qty)) + '</td>' +
+      '<td class="n">' + N(rateFmt(r.rate)) + '</td><td class="n">' + N(rateFmt(n[i].rate)) + '</td>' +
+      '<td class="n">' + N(f2(r.amount)) + '</td><td class="n">' + N(f2(n[i].amount)) + '</td></tr>';
+  });
+  const a = withVat(sum(o)), b = withVat(sum(n));
+  return '<thead><tr><th>الشريحة</th><th class="n">الكمية (' + unit + ')</th><th class="n">السعر السابق</th><th class="n">السعر الجديد</th><th class="n">المبلغ السابق</th><th class="n">المبلغ الجديد</th></tr></thead>' +
+    '<tbody>' + body + '</tbody><tfoot>' +
+    '<tr><td colspan="4">المجموع قبل الضريبة</td><td class="n">' + N(f2(a.pre)) + '</td><td class="n">' + N(f2(b.pre)) + '</td></tr>' +
+    '<tr><td colspan="4">ضريبة القيمة المضافة 15%</td><td class="n">' + N(f2(a.vat)) + '</td><td class="n">' + N(f2(b.vat)) + '</td></tr>' +
+    '<tr class="grand"><td colspan="4">الإجمالي بعد الضريبة (ر.س)</td><td class="n">' + N(f2(a.gross)) + '</td><td class="n">' + N(f2(b.gross)) + '</td></tr>' +
+    '<tr><td colspan="4">الزيادة</td><td></td><td class="n up">' + N((b.gross - a.gross >= 0 ? '+' : '') + f2(b.gross - a.gross)) + '</td></tr></tfoot>';
+}
+
+function render() {
+  const s = state();
+  const eO = withVat(sum(tierRows(s.eOld, s.kwh))).gross, eN = withVat(sum(tierRows(s.eNew, s.kwh))).gross;
+  const wO = withVat(sum(tierRows(s.wOld, s.m3))).gross, wN = withVat(sum(tierRows(s.wNew, s.m3))).gross;
+  const tO = eO + wO, tN = eN + wN, tD = tN - tO;
+  const annual = '<div class="annual">الزيادة السنوية التقريبية: <b>' + N(f2(tD * 12)) + ' ر.س</b></div>';
+  $('summary').innerHTML =
+    sumCard('', ICO_E, 'الكهرباء', eO, eN) +
+    sumCard('', ICO_W, 'المياه' + (s.sewage ? ' والصرف' : ''), wO, wN) +
+    sumCard('inv', '', 'الإجمالي الشهري', tO, tN, annual);
+
+  meter('kwhMeter', s.eNew, s.kwh, v => f0(v), 10000);
+  meter('m3Meter', s.wNew, s.m3, v => f0(v), 60);
+
+  $('tblE').innerHTML = tableHtml(s.eOld, s.eNew, s.kwh, 'ك.و.س',
+    r => f0(r.rate * 100) + ' هللة',
+    (r, i) => i === 0 ? 'من 0 – ' + N(f0(r.to)) : 'أكثر من ' + N(f0(r.from)));
+  $('tblW').innerHTML = tableHtml(s.wOld, s.wNew, s.m3, 'م³',
+    r => f2(r.rate) + ' ر.س',
+    (r, i) => i === 0 ? 'من 0 – ' + N(f0(r.to)) : (r.to === Infinity ? 'أكثر من ' + N(f0(r.from)) : 'أكثر من ' + N(f0(r.from)) + ' – ' + N(f0(r.to))));
+
+  // budget -> consumption
+  const bE = readNum('bE'), bW = readNum('bW');
+  const qEn = inverse(s.eNew, bE), qEo = inverse(s.eOld, bE);
+  const qWn = inverse(s.wNew, bW), qWo = inverse(s.wOld, bW);
+  $('rE').innerHTML = '<div class="r1">' + N(f0(qEn)) + ' ك.و.س</div><div class="r2">بالتعرفة السابقة كان المبلغ يغطي ' + N(f0(qEo)) + ' ك.و.س (الفرق ' + N(f0(qEo - qEn)) + ')</div>';
+  $('rW').innerHTML = '<div class="r1">' + N(fq(qWn)) + ' م³</div><div class="r2">بالتعرفة السابقة كان المبلغ يغطي ' + N(fq(qWo)) + ' م³ (الفرق ' + N(fq(qWo - qWn)) + ')</div>';
+
+  pressChips();
+}
+
+function makeChips(boxId, values, inputId, rangeId, unit) {
+  const box = $(boxId);
+  box.innerHTML = values.map(v => '<button type="button" class="chip" data-v="' + v + '" aria-pressed="false">' + N(v.toLocaleString('en-US')) + ' ' + unit + '</button>').join('');
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    $(inputId).value = b.dataset.v; $(rangeId).value = b.dataset.v; render();
+  });
+}
+function pressChips() {
+  [['kwhChips', 'kwh'], ['m3Chips', 'm3']].forEach(([box, inp]) => {
+    $(box).querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(parseFloat(c.dataset.v) === readNum(inp))));
+  });
+}
+function link(inputId, rangeId) {
+  $(inputId).addEventListener('input', () => { $(rangeId).value = $(inputId).value; render(); });
+  $(rangeId).addEventListener('input', () => { $(inputId).value = $(rangeId).value; render(); });
+}
+
+makeChips('kwhChips', [2000, 3000, 4000, 5000, 6000, 7000], 'kwh', 'kwhR', 'ك.و.س');
+makeChips('m3Chips', [10, 20, 30, 40, 50], 'm3', 'm3R', 'م³');
+link('kwh', 'kwhR'); link('m3', 'm3R');
+['sewage', 'method'].forEach(id => $(id).addEventListener('input', render));
+['bE', 'bW'].forEach(id => $(id).addEventListener('input', render));
+render();
+</script>
+
+</body></html>
